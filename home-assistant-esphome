@@ -1,0 +1,189 @@
+substitutions:
+  name: transit-tracker-dc2218
+  friendly_name: TfL Transit Tracker dc2218
+
+packages:
+  a10kiloham.Transit Tracker: github://a10kiloham/transit-tracker/firmware/transit-tracker.yaml
+
+esphome:
+  name: ${name}
+  name_add_mac_suffix: true
+  friendly_name: ${friendly_name}
+
+api:
+  encryption:
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  
+esp32:
+  variant: esp32s3
+  flash_size: 8MB
+  cpu_frequency: 240MHz
+  framework:
+    type: arduino
+
+psram:
+  mode: quad
+  speed: 80MHz
+  
+external_components:
+
+logger:
+  level: DEBUG
+  logs:
+    sensor: ERROR
+    text_sensor: ERROR
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: "ReplaceMe"
+  password: "ReplaceMe!"
+  power_save_mode: "NONE"
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "TransitTracker Fallback Hotspot"
+    password: "59541bEJiaf3"
+
+display:
+  - platform: hub75
+    id: matrix
+    board: adafruit-matrix-portal-s3
+    double_buffer: true
+    update_interval: 32ms
+    panel_width: 64
+    panel_height: 32
+    layout_cols: 2
+    # We swap the G and B channels in firmware because the 64x32 panel hardware has them reversed
+    g1_pin: 40
+    b1_pin: 41
+    g2_pin: 37
+    b2_pin: 39
+    e_pin: 21
+    brightness: 255
+    lambda: |-
+      id(tracker).draw_schedule();
+
+font:
+  - file: "fonts/Pixolletta8px.ttf"
+    id: pixolletta
+    size: 10
+    glyphs:
+      - abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,:;!?()"'-+/*=%@#[]{}<>|&^~
+      - " "
+
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: America/Los_Angeles
+
+color:
+  - id: rapidride_red
+    hex: "F50046"
+
+transit_tracker:
+  id: tracker
+  base_url: "wss://tt.horner.tj/"
+  limit: 3
+  feed_code: "st"
+  stops:
+    - stop_id: "1_71971" # Redmond Way & Bear Creek Pkwy
+      time_offset: -8min
+      routes:
+        - "1_100113" # 221
+        - "1_102704" # 250
+    - stop_id: "1_71961" # RTC
+      time_offset: -10min
+      routes:
+        - "1_102548" # B Line
+  styles:
+    - route_id: "1_102548"
+      name: "B"
+      color: rapidride_red
+  abbreviations:
+    - from: "Bellevue Transit Center Crossroads"
+      to: "Bellevue TC"
+    - from: "Transit Center"
+      to: "TC"
+
+
+  -----------------
+  transit_tracker:
+  id: tracker
+
+  # Base URL of the Transit Tracker API
+  base_url: "wss://tt.horner.tj/"
+
+  # The feed code of the transit agency you want to track (optional)
+  feed_code: "st"
+
+  # Maximum number of arrivals to show
+  limit: 3
+
+  # Whether to display arrival or departure times
+  time_display: departure # or "arrival"
+
+  # How to list trips:
+  #   sequential: All trips across all routes in order of arrival/departure
+  #   nextPerRoute: Each route's next trip in order of arrival/departure
+  list_mode: sequential
+
+  # Default color for route names
+  # (See https://esphome.io/components/display/#color)
+  default_route_color: my_favorite_color
+
+  # Color for real-time indicator icon and text
+  realtime_color: my_second_favorite_color
+
+  # How to display the duration units.
+  # Examples:
+  #   long  = "5min" / "1h15m"
+  #   short = "5m"   / "1h15m"
+  #   none  = "5"    / "1:15"
+  show_units: long
+
+  # If true, headsign text will scroll if it doesn't fit
+  scroll_headsigns: false
+
+  # List of stop and route IDs to track
+  stops:
+    - stop_id: "1_71971"
+      # If it takes you a known amount of time to walk to the
+      # stop, you can set a time offset here so that the time
+      # displayed on the board is more like a "leave by" time
+      time_offset: -8min # e.g., if it takes you 8 minutes to walk to the stop
+      routes:
+        - "1_100113"
+        - "1_102704"
+    - stop_id: "1_71961"
+      time_offset: -10min
+      routes:
+        - "1_102548"
+
+  # List of custom styles for route names and colors
+  styles:
+    - route_id: "1_102548"
+      name: "B"
+      # See https://esphome.io/components/display/#color
+      color: rapidride_red
+
+  # List of custom abbreviations for headsigns
+  abbreviations:
+    - from: "Bellevue Transit Center Crossroads"
+      to: "Bellevue TC"
+    - from: "Transit Center"
+      to: "TC"
+
+  -------------------------
+  display:
+  - platform: # ...
+    id: # ...
+    lambda: |-
+      id(tracker).draw_schedule();
+-------------------
+  add clock page switch every 5 seconds
+  
