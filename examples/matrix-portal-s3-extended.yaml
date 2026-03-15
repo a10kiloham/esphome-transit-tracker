@@ -1,0 +1,129 @@
+esphome:
+  name: transit-tracker
+  friendly_name: Transit Tracker
+
+esp32:
+  variant: esp32s3
+  flash_size: 8MB
+  cpu_frequency: 240MHz
+  framework:
+    type: arduino
+
+psram:
+  mode: quad
+  speed: 80MHz
+
+external_components:
+  - source:
+      type: local
+      path: ../components
+
+logger:
+  level: DEBUG
+  logs:
+    sensor: ERROR
+    text_sensor: ERROR
+
+ota:
+  - platform: esphome
+    password: ""
+
+wifi:
+  ssid: "ReplaceMe"
+  password: "ReplaceMe!"
+  power_save_mode: "NONE"
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "TransitTracker Fallback Hotspot"
+    password: "59541bEJiaf3"
+
+display:
+  - platform: hub75
+    id: matrix
+    board: adafruit-matrix-portal-s3
+    double_buffer: true
+    update_interval: 32ms
+    panel_width: 64
+    panel_height: 32
+    layout_cols: 2
+    # We swap the G and B channels in firmware because the 64x32 panel hardware has them reversed
+    g1_pin: 40
+    b1_pin: 41
+    g2_pin: 37
+    b2_pin: 39
+    e_pin: 21
+    brightness: 255
+    lambda: |-
+      id(tracker).draw_schedule();
+
+font:
+  - file: "fonts/Pixolletta8px.ttf"
+    id: pixolletta
+    size: 10
+    glyphs:
+      - abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,:;!?()"'-+/*=%@#[]{}<>|&^~
+      - " "
+
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: America/Los_Angeles
+
+color:
+  - id: rapidride_red
+    hex: "F50046"
+  - id: numbered_yellow
+    hex: "FFD700"
+  - id: headsign_white
+    hex: "E0E0E0"
+  - id: time_grey
+    hex: "B0B0B0"
+  - id: realtime_green
+    hex: "20FF00"
+
+transit_tracker:
+  id: tracker
+  base_url: "wss://tt.horner.tj/"
+  limit: 3
+  feed_code: "st"
+  stops:
+    - stop_id: "1_71971" # Redmond Way & Bear Creek Pkwy
+      time_offset: -8min
+      routes:
+        - "1_100113" # 221
+        - "1_102704" # 250
+    - stop_id: "1_71961" # RTC
+      time_offset: -10min
+      routes:
+        - "1_102548" # B Line
+
+  # Route display mode:
+  #   route_name (default): Shows the route name/ID (e.g., "B", "221")
+  #   numbered: Shows sequential numbers ("1 ", "2 ", "3 ") based on departure order
+  route_display: numbered
+
+  # Color for numbered route labels (only used when route_display is "numbered")
+  numbered_color: numbered_yellow
+
+  # Color for headsign/destination text
+  headsign_color: headsign_white
+
+  # Color for the time/duration text (when not realtime)
+  time_color: time_grey
+
+  # Whether to show the animated realtime indicator icon
+  show_realtime_icon: true
+
+  # Color for the realtime indicator icon and realtime time text
+  realtime_color: realtime_green
+
+  styles:
+    - route_id: "1_102548"
+      name: "B"
+      color: rapidride_red
+  abbreviations:
+    - from: "Bellevue Transit Center Crossroads"
+      to: "Bellevue TC"
+    - from: "Transit Center"
+      to: "TC"

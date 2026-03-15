@@ -23,6 +23,12 @@ UNIT_DISPLAY_VALUES = {
     "none": UnitDisplay.UNIT_DISPLAY_NONE,
 }
 
+RouteDisplayMode = transit_tracker_ns.enum("RouteDisplayMode")
+ROUTE_DISPLAY_MODE_VALUES = {
+    "route_name": RouteDisplayMode.ROUTE_DISPLAY_NAME,
+    "numbered": RouteDisplayMode.ROUTE_DISPLAY_NUMBERED,
+}
+
 CONF_ROUTES = "routes"
 CONF_STOPS = "stops"
 CONF_BASE_URL = "base_url"
@@ -36,6 +42,11 @@ CONF_REALTIME_COLOR = "realtime_color"
 CONF_TIME_DISPLAY = "time_display"
 CONF_LIST_MODE = "list_mode"
 CONF_SCROLL_HEADSIGNS = "scroll_headsigns"
+CONF_ROUTE_DISPLAY = "route_display"
+CONF_NUMBERED_COLOR = "numbered_color"
+CONF_HEADSIGN_COLOR = "headsign_color"
+CONF_TIME_COLOR = "time_color"
+CONF_SHOW_REALTIME_ICON = "show_realtime_icon"
 
 
 def validate_ws_url(value):
@@ -86,7 +97,12 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_LIST_MODE, default="sequential"): cv.one_of(
                 "sequential", "nextPerRoute"
             ),
-            cv.Optional(CONF_SCROLL_HEADSIGNS, default=False) : cv.boolean,
+            cv.Optional(CONF_SCROLL_HEADSIGNS, default=False): cv.boolean,
+            cv.Optional(CONF_ROUTE_DISPLAY, default="route_name"): cv.enum(ROUTE_DISPLAY_MODE_VALUES),
+            cv.Optional(CONF_NUMBERED_COLOR): COLOR_SCHEMA,
+            cv.Optional(CONF_HEADSIGN_COLOR): COLOR_SCHEMA,
+            cv.Optional(CONF_TIME_COLOR): COLOR_SCHEMA,
+            cv.Optional(CONF_SHOW_REALTIME_ICON, default=True): cv.boolean,
             cv.Optional(CONF_STOPS, default=[]): cv.ensure_list(
                 cv.Schema(
                     {
@@ -155,6 +171,30 @@ async def to_code(config):
 
     cg.add(var.set_list_mode(config[CONF_LIST_MODE]))
     cg.add(var.set_scroll_headsigns(config[CONF_SCROLL_HEADSIGNS]))
+
+    cg.add(var.set_route_display_mode(config[CONF_ROUTE_DISPLAY]))
+    cg.add(var.set_show_realtime_icon(config[CONF_SHOW_REALTIME_ICON]))
+
+    if CONF_NUMBERED_COLOR in config:
+        cg.add(
+            var.set_numbered_color(
+                await cg.get_variable(config[CONF_NUMBERED_COLOR])
+            )
+        )
+
+    if CONF_HEADSIGN_COLOR in config:
+        cg.add(
+            var.set_headsign_color(
+                await cg.get_variable(config[CONF_HEADSIGN_COLOR])
+            )
+        )
+
+    if CONF_TIME_COLOR in config:
+        cg.add(
+            var.set_time_color(
+                await cg.get_variable(config[CONF_TIME_COLOR])
+            )
+        )
 
     cg.add(var.set_limit(config[CONF_LIMIT]))
 

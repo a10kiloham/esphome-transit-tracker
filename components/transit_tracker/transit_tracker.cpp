@@ -69,6 +69,8 @@ void TransitTracker::dump_config() {
   ESP_LOGCONFIG(TAG, "  List mode: %s", this->list_mode_.c_str());
   ESP_LOGCONFIG(TAG, "  Display departure times: %s", this->display_departure_times_ ? "true" : "false");
   ESP_LOGCONFIG(TAG, "  Scroll Headsigns: %s", this->scroll_headsigns_ ? "true" : "false");
+  ESP_LOGCONFIG(TAG, "  Route display mode: %s", this->route_display_mode_ == ROUTE_DISPLAY_NUMBERED ? "numbered" : "route_name");
+  ESP_LOGCONFIG(TAG, "  Show realtime icon: %s", this->show_realtime_icon_ ? "true" : "false");
 }
 
 void TransitTracker::reconnect() {
@@ -341,15 +343,27 @@ void HOT TransitTracker::draw_realtime_icon_(int bottom_right_x, int bottom_righ
 }
 
 void TransitTracker::draw_trip(
-    const Trip &trip, int y_offset, int font_height, unsigned long uptime, uint rtc_now,
+    const Trip &trip, int trip_index, int y_offset, int font_height, unsigned long uptime, uint rtc_now,
     bool no_draw, int *headsign_overflow_out, int scroll_cycle_duration
 ) {
+    // Determine what to display in the route label position
+    std::string route_label;
+    Color route_label_color;
+
+    if (this->route_display_mode_ == ROUTE_DISPLAY_NUMBERED) {
+      route_label = str_sprintf("%d ", trip_index + 1);
+      route_label_color = this->numbered_color_;
+    } else {
+      route_label = trip.route_name;
+      route_label_color = trip.route_color;
+    }
+
     if (!no_draw) {
-      this->display_->print(0, y_offset, this->font_, trip.route_color, display::TextAlign::TOP_LEFT, trip.route_name.c_str());
+      this->display_->print(0, y_offset, this->font_, route_label_color, display::TextAlign::TOP_LEFT, route_label.c_str());
     }
 
     int route_width, _;
-    this->font_->measure(trip.route_name.c_str(), &route_width, &_, &_, &_);
+    this->font_->measure(route_label.c_str(), &route_width, &_, &_, &_);
 
     auto time_display = this->localization_.fmt_duration_from_now(
       this->display_departure_times_ ? trip.departure_time : trip.arrival_time,
@@ -363,11 +377,11 @@ void TransitTracker::draw_trip(
     int headsign_clipping_end = this->display_->get_width() - time_width - 2;
 
     if (!no_draw) {
-      Color time_color = trip.is_realtime ? this->realtime_color_ : Color(0xa7a7a7);
+      Color time_color = trip.is_realtime ? this->realtime_color_ : this->time_color_;
       this->display_->print(this->display_->get_width() + 1, y_offset, this->font_, time_color, display::TextAlign::TOP_RIGHT, time_display.c_str());
     }
 
-    if (trip.is_realtime) {
+    if (trip.is_realtime && this->show_realtime_icon_) {
       headsign_clipping_end -= 8;
 
       if(!no_draw) {
@@ -422,7 +436,7 @@ void TransitTracker::draw_trip(
     }
 
     this->display_->start_clipping(headsign_clipping_start, 0, headsign_clipping_end, this->display_->get_height());
-    this->display_->print(headsign_clipping_start - scroll_offset, y_offset, this->font_, trip.headsign.c_str());
+    this->display_->print(headsign_clipping_start - scroll_offset, y_offset, this->font_, this->headsign_color_, trip.headsign.c_str());
     this->display_->end_clipping();
 }
 
@@ -476,10 +490,12 @@ void HOT TransitTracker::draw_schedule() {
   int scroll_cycle_duration = 0;
   if (this->scroll_headsigns_) {
     int largest_headsign_overflow = 0;
+    int idx = 0;
     for (const Trip &trip : this->schedule_state_.trips) {
       int headsign_overflow;
-      this->draw_trip(trip, 0, nominal_font_height, uptime, rtc_now, true, &headsign_overflow);
+      this->draw_trip(trip, idx, 0, nominal_font_height, uptime, rtc_now, true, &headsign_overflow);
       largest_headsign_overflow = max(largest_headsign_overflow, headsign_overflow);
+      idx++;
     }
 
     if (largest_headsign_overflow > 0) {
@@ -491,9 +507,11 @@ void HOT TransitTracker::draw_schedule() {
   int max_trips_height = (this->limit_ * this->font_->get_ascender()) + ((this->limit_ - 1) * this->font_->get_descender());
   int y_offset = (this->display_->get_height() % max_trips_height) / 2;
 
+  int trip_index = 0;
   for (const Trip &trip : this->schedule_state_.trips) {
-    this->draw_trip(trip, y_offset, nominal_font_height, uptime, rtc_now, false, nullptr, scroll_cycle_duration);
+    this->draw_trip(trip, trip_index, y_offset, nominal_font_height, uptime, rtc_now, false, nullptr, scroll_cycle_duration);
     y_offset += nominal_font_height;
+    trip_index++;
   }
 
   this->schedule_state_.mutex.unlock();

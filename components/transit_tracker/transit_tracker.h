@@ -14,6 +14,11 @@
 namespace esphome {
 namespace transit_tracker {
 
+enum RouteDisplayMode : uint8_t {
+  ROUTE_DISPLAY_NAME,
+  ROUTE_DISPLAY_NUMBERED,
+};
+
 struct RouteStyle {
   std::string name;
   Color color;
@@ -55,6 +60,12 @@ class TransitTracker : public Component {
     void set_abbreviations_from_text(const std::string &text);
     void set_route_styles_from_text(const std::string &text);
 
+    void set_route_display_mode(RouteDisplayMode mode) { route_display_mode_ = mode; }
+    void set_numbered_color(const Color &color) { numbered_color_ = color; }
+    void set_headsign_color(const Color &color) { headsign_color_ = color; }
+    void set_time_color(const Color &color) { time_color_ = color; }
+    void set_show_realtime_icon(bool show) { show_realtime_icon_ = show; }
+
     void set_realtime_color(const Color &color);
 
   protected:
@@ -67,7 +78,7 @@ class TransitTracker : public Component {
     void draw_realtime_icon_(int bottom_right_x, int bottom_right_y, unsigned long now);
 
     void draw_trip(
-      const Trip &trip, int y_offset, int font_height, unsigned long uptime, uint rtc_now,
+      const Trip &trip, int trip_index, int y_offset, int font_height, unsigned long uptime, uint rtc_now,
       bool no_draw = false, int *headsign_overflow_out = nullptr, int scroll_cycle_duration = 0
     );
 
@@ -99,6 +110,12 @@ class TransitTracker : public Component {
     Color default_route_color_ = Color(0x028e51);
     std::map<std::string, RouteStyle> route_styles_;
     bool scroll_headsigns_ = false;
+
+    RouteDisplayMode route_display_mode_ = ROUTE_DISPLAY_NAME;
+    Color numbered_color_ = Color(0xFFFFFF);
+    Color headsign_color_ = Color(0xFFFFFF);
+    Color time_color_ = Color(0xa7a7a7);
+    bool show_realtime_icon_ = true;
 
     Color realtime_color_ = Color(0x20FF00);
     Color realtime_color_dark_ = Color(0x00A700);
