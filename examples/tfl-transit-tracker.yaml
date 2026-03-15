@@ -23,6 +23,10 @@ psram:
 
 external_components:
   - source: github://avwuff/ESPHome-HUB75-MatrixDisplayWrapper@main
+  # For testing local changes, use:
+  #   source:
+  #     type: local
+  #     path: /path/to/esphome-transit-tracker/components
   - source: github://a10kiloham/esphome-transit-tracker@main
   - source: github://tjhorner/esphome-custom-components@main
     components: [ lis3dh, project_version ]
@@ -107,7 +111,8 @@ transit_tracker:
   route_display: route_name
 
   # Whether to show route labels (name or number) at all
-  show_line_icons: true
+  # (can also be toggled at runtime via set_show_line_icons())
+  # show_line_icons: true
 
   # Whether to show the animated realtime indicator icon
   show_realtime_icon: true
