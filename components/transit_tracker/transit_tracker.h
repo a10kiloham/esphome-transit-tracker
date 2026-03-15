@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <vector>
 #include <ArduinoWebsockets.h>
 
 #include "esphome/core/component.h"
@@ -65,6 +66,9 @@ class TransitTracker : public Component {
     void set_headsign_color(const Color &color) { headsign_color_ = color; }
     void set_time_color(const Color &color) { time_color_ = color; }
     void set_show_realtime_icon(bool show) { show_realtime_icon_ = show; }
+    void set_show_line_icons(bool show) { show_line_icons_ = show; }
+
+    void set_sort_order_from_text(const std::string &text);
 
     void set_realtime_color(const Color &color);
 
@@ -116,6 +120,8 @@ class TransitTracker : public Component {
     Color headsign_color_ = Color(0xFFFFFF);
     Color time_color_ = Color(0xa7a7a7);
     bool show_realtime_icon_ = true;
+    bool show_line_icons_ = true;
+    std::vector<std::string> sort_order_;
 
     Color realtime_color_ = Color(0x20FF00);
     Color realtime_color_dark_ = Color(0x00A700);

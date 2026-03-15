@@ -71,6 +71,7 @@ void TransitTracker::dump_config() {
   ESP_LOGCONFIG(TAG, "  Scroll Headsigns: %s", this->scroll_headsigns_ ? "true" : "false");
   ESP_LOGCONFIG(TAG, "  Route display mode: %s", this->route_display_mode_ == ROUTE_DISPLAY_NUMBERED ? "numbered" : "route_name");
   ESP_LOGCONFIG(TAG, "  Show realtime icon: %s", this->show_realtime_icon_ ? "true" : "false");
+  ESP_LOGCONFIG(TAG, "  Show line icons: %s", this->show_line_icons_ ? "true" : "false");
 }
 
 void TransitTracker::reconnect() {
@@ -153,7 +154,7 @@ void TransitTracker::on_ws_message_(websockets::WebsocketsMessage message) {
   });
 
   if (!valid) {
-    this->status_set_error("Failed to parse schedule data");
+    this->status_set_error(LOG_STR("Failed to parse schedule data"));
     return;
   }
 }
@@ -165,7 +166,7 @@ void TransitTracker::on_ws_event_(websockets::WebsocketsEvent event, String data
     auto message = json::build_json([this](JsonObject root) {
       root["event"] = "schedule:subscribe";
 
-      auto data = root.createNestedObject("data");
+      auto data = root["data"].to<JsonObject>();
 
       if (!this->feed_code_.empty()) {
         data["feedCode"] = this->feed_code_;
@@ -226,7 +227,7 @@ void TransitTracker::connect_ws_() {
     this->connection_attempts_++;
 
     if (this->connection_attempts_ >= 3) {
-      this->status_set_error("Failed to connect to WebSocket server");
+      this->status_set_error(LOG_STR("Failed to connect to WebSocket server"));
     }
 
     if (this->connection_attempts_ >= 15) {
@@ -279,6 +280,16 @@ void TransitTracker::set_route_styles_from_text(const std::string &text) {
     uint32_t color = std::stoul(parts[2], nullptr, 16);
     this->add_route_style(parts[0], parts[1], Color(color));
   }
+}
+
+void TransitTracker::set_sort_order_from_text(const std::string &text) {
+  this->sort_order_.clear();
+  for (const auto &line : split(text, '\n')) {
+    if (!line.empty()) {
+      this->sort_order_.push_back(line);
+    }
+  }
+  ESP_LOGD(TAG, "Set sort order with %d entries", this->sort_order_.size());
 }
 
 void TransitTracker::draw_text_centered_(const char *text, Color color) {
@@ -346,24 +357,28 @@ void TransitTracker::draw_trip(
     const Trip &trip, int trip_index, int y_offset, int font_height, unsigned long uptime, uint rtc_now,
     bool no_draw, int *headsign_overflow_out, int scroll_cycle_duration
 ) {
-    // Determine what to display in the route label position
-    std::string route_label;
-    Color route_label_color;
+    int route_width = 0;
+    int _;
 
-    if (this->route_display_mode_ == ROUTE_DISPLAY_NUMBERED) {
-      route_label = str_sprintf("%d ", trip_index + 1);
-      route_label_color = this->numbered_color_;
-    } else {
-      route_label = trip.route_name;
-      route_label_color = trip.route_color;
+    if (this->show_line_icons_) {
+      // Determine what to display in the route label position
+      std::string route_label;
+      Color route_label_color;
+
+      if (this->route_display_mode_ == ROUTE_DISPLAY_NUMBERED) {
+        route_label = str_sprintf("%d ", trip_index + 1);
+        route_label_color = this->numbered_color_;
+      } else {
+        route_label = trip.route_name;
+        route_label_color = trip.route_color;
+      }
+
+      if (!no_draw) {
+        this->display_->print(0, y_offset, this->font_, route_label_color, display::TextAlign::TOP_LEFT, route_label.c_str());
+      }
+
+      this->font_->measure(route_label.c_str(), &route_width, &_, &_, &_);
     }
-
-    if (!no_draw) {
-      this->display_->print(0, y_offset, this->font_, route_label_color, display::TextAlign::TOP_LEFT, route_label.c_str());
-    }
-
-    int route_width, _;
-    this->font_->measure(route_label.c_str(), &route_width, &_, &_, &_);
 
     auto time_display = this->localization_.fmt_duration_from_now(
       this->display_departure_times_ ? trip.departure_time : trip.arrival_time,
@@ -373,7 +388,7 @@ void TransitTracker::draw_trip(
     int time_width;
     this->font_->measure(time_display.c_str(), &time_width, &_, &_, &_);
 
-    int headsign_clipping_start = route_width + 3;
+    int headsign_clipping_start = this->show_line_icons_ ? route_width + 3 : 0;
     int headsign_clipping_end = this->display_->get_width() - time_width - 2;
 
     if (!no_draw) {

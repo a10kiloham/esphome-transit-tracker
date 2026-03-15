@@ -1,0 +1,135 @@
+substitutions:
+  project_version: "1"
+
+esphome:
+  name: transit-tracker
+  friendly_name: TfL Transit Tracker
+  name_add_mac_suffix: true
+  min_version: 2026.2.1
+  project:
+    name: "a10kiloham.Transit Tracker"
+    version: ${project_version}
+
+esp32:
+  variant: esp32s3
+  flash_size: 8MB
+  cpu_frequency: 240MHz
+  framework:
+    type: arduino
+
+psram:
+  mode: quad
+  speed: 80MHz
+
+external_components:
+  - source: github://avwuff/ESPHome-HUB75-MatrixDisplayWrapper@main
+  - source: github://a10kiloham/esphome-transit-tracker@main
+  - source: github://tjhorner/esphome-custom-components@main
+    components: [ lis3dh, project_version ]
+
+logger:
+  level: DEBUG
+  logs:
+    sensor: ERROR
+    text_sensor: ERROR
+
+ota:
+  - platform: esphome
+    password: ""
+
+wifi:
+  ssid: "ReplaceMe"
+  password: "ReplaceMe!"
+  power_save_mode: "NONE"
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "TransitTracker Fallback Hotspot"
+    password: "59541bEJiaf3"
+
+captive_portal:
+
+api:
+  reboot_timeout: 0s
+
+http_request:
+  verify_ssl: false
+
+display:
+  - platform: hub75
+    id: matrix
+    board: adafruit-matrix-portal-s3
+    double_buffer: true
+    update_interval: 32ms
+    panel_width: 64
+    panel_height: 32
+    layout_cols: 2
+    # We swap the G and B channels in firmware because the 64x32 panel hardware has them reversed
+    g1_pin: 40
+    b1_pin: 41
+    g2_pin: 37
+    b2_pin: 39
+    e_pin: 21
+    brightness: 255
+    lambda: |-
+      id(tracker).draw_schedule();
+
+font:
+  - file: "fonts/Pixolletta8px.ttf"
+    id: pixolletta
+    size: 10
+    glyphs:
+      - abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,:;!?()"'-+/*=%@#[]{}<>|&^~
+      - " "
+
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: Europe/London
+
+color:
+  - id: "c_001AFF"
+    hex: "001AFF"
+  - id: "c_FF0037"
+    hex: "FF0037"
+
+transit_tracker:
+  id: tracker
+  base_url: "wss://tfl.xdca.com/"
+  time_display: "arrival"
+  show_units: "long"
+  list_mode: "sequential"
+  scroll_headsigns: true
+
+  # Route display mode:
+  #   route_name (default): Shows the route name/ID (e.g., "B", "221")
+  #   numbered: Shows sequential numbers ("1 ", "2 ", "3 ") based on departure order
+  route_display: route_name
+
+  # Whether to show route labels (name or number) at all
+  show_line_icons: true
+
+  # Whether to show the animated realtime indicator icon
+  show_realtime_icon: true
+
+  stops:
+    - stop_id: "tfl:940GZZLUHTD"
+      routes:
+        - "tfl:northern-outbound"
+        - "tfl:northern-inbound"
+  styles:
+    - route_id: "tfl:northern-outbound"
+      name: ""
+      color: "c_001AFF"
+    - route_id: "tfl:northern-inbound"
+      name: ""
+      color: "c_FF0037"
+  abbreviations:
+    - from: "Edgware via Bank"
+      to: "Edgware"
+    - from: "Edgware via CX"
+      to: "Edgware"
+    - from: "Morden via CX"
+      to: "Morden via Charing Cross"
+    - from: "Kennington via CX"
+      to: "Kennington via Charing Cross"

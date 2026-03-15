@@ -47,6 +47,7 @@ CONF_NUMBERED_COLOR = "numbered_color"
 CONF_HEADSIGN_COLOR = "headsign_color"
 CONF_TIME_COLOR = "time_color"
 CONF_SHOW_REALTIME_ICON = "show_realtime_icon"
+CONF_SHOW_LINE_ICONS = "show_line_icons"
 
 
 def validate_ws_url(value):
@@ -103,6 +104,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_HEADSIGN_COLOR): COLOR_SCHEMA,
             cv.Optional(CONF_TIME_COLOR): COLOR_SCHEMA,
             cv.Optional(CONF_SHOW_REALTIME_ICON, default=True): cv.boolean,
+            cv.Optional(CONF_SHOW_LINE_ICONS, default=True): cv.boolean,
             cv.Optional(CONF_STOPS, default=[]): cv.ensure_list(
                 cv.Schema(
                     {
@@ -174,6 +176,7 @@ async def to_code(config):
 
     cg.add(var.set_route_display_mode(config[CONF_ROUTE_DISPLAY]))
     cg.add(var.set_show_realtime_icon(config[CONF_SHOW_REALTIME_ICON]))
+    cg.add(var.set_show_line_icons(config[CONF_SHOW_LINE_ICONS]))
 
     if CONF_NUMBERED_COLOR in config:
         cg.add(
