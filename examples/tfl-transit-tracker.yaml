@@ -1,11 +1,11 @@
 substitutions:
-  name: transit-tracker-dc2218
-  friendly_name: Transit Tracker dc2218
+  name: transit-tracker
+  friendly_name: Transit Tracker
   project_version: "dev"
 
 esphome:
   name: ${name}
-  name_add_mac_suffix: false
+  name_add_mac_suffix: true
   friendly_name: ${friendly_name}
   project:
     name: "a10kiloham.Transit Tracker"
@@ -17,29 +17,43 @@ ota:
 packages:
   a10kiloham.Transit Tracker: github://a10kiloham/transit-tracker/firmware/transit-tracker.yaml@main
 
-dashboard_import:
-  package_import_url: github://a10kiloham/transit-tracker/firmware/transit-tracker.yaml@main
-
-external_components:
-  - source: github://avwuff/ESPHome-HUB75-MatrixDisplayWrapper@4fc1f26500b97a39693cd8af4ba2abb75f83ce0b
-    refresh: 0s
-  - source: github://a10kiloham/esphome-transit-tracker@main
-    refresh: 0s
-  - source: github://tjhorner/esphome-custom-components@c57ffd46fcf30badb2838421e8ff6cbeb9c1dd06
-    components: [ lis3dh, project_version ]
-    refresh: 0s
-    
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
 
+color:
+  - id: my_red
+    hex: "F50046"
+  - id: my_green
+    hex: "20FF00"
+  - id: my_orange
+    hex: "ff5900"
+  - id: rapidride_red
+    hex: "F50046"
+  - id: numbered_yellow
+    hex: "FFD700"
+  - id: headsign_white
+    hex: "E0E0E0"
+  - id: time_grey
+    hex: "B0B0B0"
+  - id: realtime_green
+    hex: "20FF00"
+
 transit_tracker:
   id: tracker
-  base_url: "wss://tfl.xdca.com/"
+  # change to your API server
+  base_url: "wss://0.0.0.0/"
   time_display: "arrival"
   show_units: "long"
   list_mode: "sequential"
   scroll_headsigns: true
+  headsign_color: my_green
+  route_display: numbered
+  numbered_color: my_red
+  time_color: headsign_white
+  
+  show_realtime_icon: false
+  limit: 6
   stops:
     - stop_id: "tfl:940GZZLUHTD"
       routes:
@@ -48,7 +62,7 @@ transit_tracker:
   styles:
     - route_id: "tfl:northern-outbound"
       name: ""
-      color: "c_001AFF"
+      color: my_orange
     - route_id: "tfl:northern-inbound"
       name: ""
-      color: "c_FF0037"
+      color: my_red
