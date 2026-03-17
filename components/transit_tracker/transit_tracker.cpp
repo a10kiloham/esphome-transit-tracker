@@ -65,7 +65,8 @@ void TransitTracker::dump_config() {
   ESP_LOGCONFIG(TAG, "Transit Tracker:");
   ESP_LOGCONFIG(TAG, "  Base URL: %s", this->base_url_.c_str());
   ESP_LOGCONFIG(TAG, "  Schedule: %s", this->schedule_string_.c_str());
-  ESP_LOGCONFIG(TAG, "  Limit: %d", this->limit_);
+  ESP_LOGCONFIG(TAG, "  Limit (per page): %d", this->limit_);
+  ESP_LOGCONFIG(TAG, "  Request trips: %d", this->request_trips_ > 0 ? this->request_trips_ : this->limit_);
   ESP_LOGCONFIG(TAG, "  List mode: %s", this->list_mode_.c_str());
   ESP_LOGCONFIG(TAG, "  Display departure times: %s", this->display_departure_times_ ? "true" : "false");
   ESP_LOGCONFIG(TAG, "  Scroll Headsigns: %s", this->scroll_headsigns_ ? "true" : "false");
@@ -173,7 +174,7 @@ void TransitTracker::on_ws_event_(websockets::WebsocketsEvent event, String data
       }
 
       data["routeStopPairs"] = this->schedule_string_;
-      data["limit"] = this->limit_;
+      data["limit"] = this->request_trips_ > 0 ? this->request_trips_ : this->limit_;
       data["sortByDeparture"] = this->display_departure_times_;
       data["listMode"] = this->list_mode_;
     });
@@ -290,6 +291,22 @@ void TransitTracker::set_sort_order_from_text(const std::string &text) {
     }
   }
   ESP_LOGD(TAG, "Set sort order with %d entries", this->sort_order_.size());
+}
+
+void TransitTracker::next_page() {
+  int total_pages = this->get_page_count();
+  if (total_pages <= 1) {
+    this->current_page_ = 0;
+    return;
+  }
+  this->current_page_ = (this->current_page_ + 1) % total_pages;
+  ESP_LOGD(TAG, "Advancing to page %d of %d", this->current_page_ + 1, total_pages);
+}
+
+int TransitTracker::get_page_count() const {
+  int total_trips = this->schedule_state_.trips.size();
+  if (total_trips <= 0 || this->limit_ <= 0) return 1;
+  return (total_trips + this->limit_ - 1) / this->limit_;
 }
 
 void TransitTracker::draw_text_centered_(const char *text, Color color) {
@@ -498,6 +515,27 @@ void HOT TransitTracker::draw_schedule() {
 
   this->schedule_state_.mutex.lock();
 
+  // Auto-advance page when draw_schedule() hasn't been called for a while
+  // (indicates we were on another display page and just came back)
+  unsigned long now_ms = millis();
+  if (this->last_draw_time_ != 0 && now_ms - this->last_draw_time_ > 500) {
+    this->next_page();
+  }
+  this->last_draw_time_ = now_ms;
+
+  int total_trips = this->schedule_state_.trips.size();
+  int page_start = this->current_page_ * this->limit_;
+  int page_end = std::min(page_start + this->limit_, total_trips);
+
+  // Clamp page if trips have been removed
+  if (page_start >= total_trips) {
+    this->current_page_ = 0;
+    page_start = 0;
+    page_end = std::min(this->limit_, total_trips);
+  }
+
+  int trips_on_page = page_end - page_start;
+
   int nominal_font_height = this->font_->get_ascender() + this->font_->get_descender();
   unsigned long uptime = millis();
   uint rtc_now = this->rtc_->now().timestamp;
@@ -505,12 +543,10 @@ void HOT TransitTracker::draw_schedule() {
   int scroll_cycle_duration = 0;
   if (this->scroll_headsigns_) {
     int largest_headsign_overflow = 0;
-    int idx = 0;
-    for (const Trip &trip : this->schedule_state_.trips) {
+    for (int i = page_start; i < page_end; i++) {
       int headsign_overflow;
-      this->draw_trip(trip, idx, 0, nominal_font_height, uptime, rtc_now, true, &headsign_overflow);
+      this->draw_trip(this->schedule_state_.trips[i], i, 0, nominal_font_height, uptime, rtc_now, true, &headsign_overflow);
       largest_headsign_overflow = max(largest_headsign_overflow, headsign_overflow);
-      idx++;
     }
 
     if (largest_headsign_overflow > 0) {
@@ -520,13 +556,12 @@ void HOT TransitTracker::draw_schedule() {
   }
 
   int max_trips_height = (this->limit_ * this->font_->get_ascender()) + ((this->limit_ - 1) * this->font_->get_descender());
-  int y_offset = (this->display_->get_height() % max_trips_height) / 2;
+  int y_offset = (this->display_->get_height() - max_trips_height) / 2;
+  if (y_offset < 0) y_offset = 0;
 
-  int trip_index = 0;
-  for (const Trip &trip : this->schedule_state_.trips) {
-    this->draw_trip(trip, trip_index, y_offset, nominal_font_height, uptime, rtc_now, false, nullptr, scroll_cycle_duration);
+  for (int i = page_start; i < page_end; i++) {
+    this->draw_trip(this->schedule_state_.trips[i], i, y_offset, nominal_font_height, uptime, rtc_now, false, nullptr, scroll_cycle_duration);
     y_offset += nominal_font_height;
-    trip_index++;
   }
 
   this->schedule_state_.mutex.unlock();
