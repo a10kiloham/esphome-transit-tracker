@@ -473,32 +473,40 @@ void TransitTracker::draw_trip(
 }
 
 void HOT TransitTracker::draw_schedule(int page) {
+  ESP_LOGD(TAG, "draw_schedule called with page=%d, trips=%d, limit=%d",
+           page, (int)this->schedule_state_.trips.size(), this->limit_);
+
   if (this->display_ == nullptr) {
     ESP_LOGW(TAG, "No display attached, cannot draw schedule");
     return;
   }
 
   if (!esphome::network::is_connected()) {
+    ESP_LOGD(TAG, "draw_schedule: waiting for network");
     this->draw_text_centered_("Waiting for network", Color(0x252627));
     return;
   }
 
   if (!this->rtc_->now().is_valid()) {
+    ESP_LOGD(TAG, "draw_schedule: waiting for time sync");
     this->draw_text_centered_("Waiting for time sync", Color(0x252627));
     return;
   }
 
   if (this->base_url_.empty()) {
+    ESP_LOGD(TAG, "draw_schedule: no base URL");
     this->draw_text_centered_("No base URL set", Color(0x252627));
     return;
   }
 
   if (this->status_has_error()) {
+    ESP_LOGD(TAG, "draw_schedule: status has error");
     this->draw_text_centered_("Error loading schedule", Color(0xFE4C5C));
     return;
   }
 
   if (!this->has_ever_connected_) {
+    ESP_LOGD(TAG, "draw_schedule: has never connected");
     this->draw_text_centered_("Loading...", Color(0x252627));
     return;
   }
@@ -509,6 +517,7 @@ void HOT TransitTracker::draw_schedule(int page) {
       message = "No upcoming departures";
     }
 
+    ESP_LOGD(TAG, "draw_schedule: no trips, showing '%s'", message);
     this->draw_text_centered_(message, Color(0x252627));
     return;
   }
@@ -535,6 +544,9 @@ void HOT TransitTracker::draw_schedule(int page) {
   int page_start = effective_page * this->limit_;
   int page_end = std::min(page_start + this->limit_, total_trips);
 
+  ESP_LOGD(TAG, "draw_schedule: effective_page=%d, total_trips=%d, page_start=%d, page_end=%d",
+           effective_page, total_trips, page_start, page_end);
+
   // If the requested page is beyond available trips
   if (page_start >= total_trips) {
     if (page < 0) {
@@ -544,6 +556,7 @@ void HOT TransitTracker::draw_schedule(int page) {
       page_end = std::min(this->limit_, total_trips);
     } else {
       // Explicit page beyond available data — nothing to draw
+      ESP_LOGD(TAG, "draw_schedule: page %d beyond available trips (%d), drawing nothing", page, total_trips);
       this->schedule_state_.mutex.unlock();
       return;
     }

@@ -1,17 +1,17 @@
 ## TfL Transit Tracker – Multi-page example
 ##
-## This example extends the base transit tracker by showing TWO pages of
-## upcoming trips (trips 1–3 and trips 4–6), each on its own display page,
-## followed by a clock and IP address page. The interval timer rotates
-## through all four pages every 5 seconds:
+## This example extends the base transit tracker to show TWO pages of
+## upcoming trips (trips 1–3 on the base transit_schedule page, then
+## trips 4–6 on an additional transit_page_2), followed by the clock
+## page already defined in the base package.
 ##
-##   transit page 1 → transit page 2 → clock → IP address → (repeat)
+## The base package defines: transit_schedule, clock_page
+## This config modifies transit_schedule to show explicit page 0,
+## and appends transit_page_2 for page 1.
 ##
-## Key differences from the single-page example:
-##   • request_trips is set to 6 so the server returns enough data
-##   • draw_schedule(0) and draw_schedule(1) explicitly select which page
-##     of trips to render (0-indexed)
-##   • If fewer than 4 trips are available, page 2 simply draws nothing
+## Page rotation (5s interval): transit_schedule → clock → transit_page_2 → …
+##
+## Key config: request_trips must be >= 2 × limit to fill both pages.
 
 substitutions:
   name: transit-tracker
@@ -85,39 +85,28 @@ transit_tracker:
       name: ""
       color: my_red
 
-# Override the display pages from the base package.
-# Two transit pages are shown explicitly via draw_schedule(page), followed
-# by the clock and IP address pages.
+# Extend the base display to add a second transit page.
+# The base package already defines transit_schedule and clock_page,
+# so we use !extend on those IDs to modify them in-place rather than
+# redefining them (which would cause a duplicate ID error).
 display:
   - id: !extend matrix
     pages:
-      - id: transit_page_1
+      - id: !extend transit_schedule
         lambda: |-
           id(tracker).draw_schedule(0);
-      - id: transit_page_2
-        lambda: |-
-          id(tracker).draw_schedule(1);
-      - id: clock_page
+      - id: !extend clock_page
         lambda: |-
           int x = it.get_width() / 2;
           int y = it.get_height() / 2;
           it.strftime(x, y / 2, id(pixolletta), COLOR_ON, TextAlign::CENTER, "%r", id(sntp_time).now());
           it.strftime(x, y + (y / 2), id(pixolletta), COLOR_ON, TextAlign::CENTER, "%B %d, %Y", id(sntp_time).now());
-      # - id: ip_address_page
-      #   lambda: |-
-      #     int x = it.get_width() / 2;
-      #     int y = it.get_height() / 2;
-      #     auto ip_addresses = ::esphome::network::get_ip_addresses();
-      #     if (ip_addresses.empty()) {
-      #       it.printf(x, y, id(pixolletta), COLOR_ON, TextAlign::CENTER, "No IP Address");
-      #       return;
-      #     }
-      #     char buf[IP_ADDRESS_BUFFER_SIZE];
-      #     ip_addresses[0].str_to(buf);
-      #     it.printf(x, y, id(pixolletta), COLOR_ON, TextAlign::CENTER, "%s", buf);
+      - id: transit_page_2
+        lambda: |-
+          id(tracker).draw_schedule(1);
 
 # Rotate pages every 5 seconds.
-# Each transit page explicitly selects which trips to show via draw_schedule(page).
+# Page order: transit_schedule (page 0) → clock_page → transit_page_2 (page 1) → …
 interval:
   - interval: 5s
     then:
