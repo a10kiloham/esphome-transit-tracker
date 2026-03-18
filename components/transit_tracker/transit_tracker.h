@@ -37,7 +37,7 @@ class TransitTracker : public Component {
     void reconnect();
     void close(bool fully = false);
 
-    void draw_schedule();
+    void draw_schedule(int page = -1);
     void next_page();
     int get_page_count() const;
     int get_current_page() const { return current_page_; }

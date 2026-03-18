@@ -472,7 +472,7 @@ void TransitTracker::draw_trip(
     this->display_->end_clipping();
 }
 
-void HOT TransitTracker::draw_schedule() {
+void HOT TransitTracker::draw_schedule(int page) {
   if (this->display_ == nullptr) {
     ESP_LOGW(TAG, "No display attached, cannot draw schedule");
     return;
@@ -515,23 +515,38 @@ void HOT TransitTracker::draw_schedule() {
 
   this->schedule_state_.mutex.lock();
 
-  // Auto-advance page when draw_schedule() hasn't been called for a while
-  // (indicates we were on another display page and just came back)
-  unsigned long now_ms = millis();
-  if (this->last_draw_time_ != 0 && now_ms - this->last_draw_time_ > 500) {
-    this->next_page();
+  int effective_page;
+  if (page >= 0) {
+    // Explicit page requested — use it directly, no auto-advance
+    effective_page = page;
+  } else {
+    // Auto-advance mode (original behavior): advance page when
+    // draw_schedule() hasn't been called for a while (indicates we
+    // were on another display page and just came back)
+    unsigned long now_ms = millis();
+    if (this->last_draw_time_ != 0 && now_ms - this->last_draw_time_ > 500) {
+      this->next_page();
+    }
+    this->last_draw_time_ = now_ms;
+    effective_page = this->current_page_;
   }
-  this->last_draw_time_ = now_ms;
 
   int total_trips = this->schedule_state_.trips.size();
-  int page_start = this->current_page_ * this->limit_;
+  int page_start = effective_page * this->limit_;
   int page_end = std::min(page_start + this->limit_, total_trips);
 
-  // Clamp page if trips have been removed
+  // If the requested page is beyond available trips
   if (page_start >= total_trips) {
-    this->current_page_ = 0;
-    page_start = 0;
-    page_end = std::min(this->limit_, total_trips);
+    if (page < 0) {
+      // Auto-advance mode: clamp back to page 0
+      this->current_page_ = 0;
+      page_start = 0;
+      page_end = std::min(this->limit_, total_trips);
+    } else {
+      // Explicit page beyond available data — nothing to draw
+      this->schedule_state_.mutex.unlock();
+      return;
+    }
   }
 
   int trips_on_page = page_end - page_start;

@@ -1,0 +1,125 @@
+## TfL Transit Tracker – Multi-page example
+##
+## This example extends the base transit tracker by showing TWO pages of
+## upcoming trips (trips 1–3 and trips 4–6), each on its own display page,
+## followed by a clock and IP address page. The interval timer rotates
+## through all four pages every 5 seconds:
+##
+##   transit page 1 → transit page 2 → clock → IP address → (repeat)
+##
+## Key differences from the single-page example:
+##   • request_trips is set to 6 so the server returns enough data
+##   • draw_schedule(0) and draw_schedule(1) explicitly select which page
+##     of trips to render (0-indexed)
+##   • If fewer than 4 trips are available, page 2 simply draws nothing
+
+substitutions:
+  name: transit-tracker
+  friendly_name: Transit Tracker
+  project_version: "dev"
+
+esphome:
+  name: ${name}
+  name_add_mac_suffix: true
+  friendly_name: ${friendly_name}
+  project:
+    name: "a10kiloham.Transit Tracker"
+    version: ${project_version}
+
+ota:
+  - platform: esphome
+
+packages:
+  a10kiloham.Transit Tracker: github://a10kiloham/transit-tracker/firmware/transit-tracker.yaml@main
+
+external_components:
+  - source: github://avwuff/ESPHome-HUB75-MatrixDisplayWrapper@4fc1f26500b97a39693cd8af4ba2abb75f83ce0b
+    refresh: 0s
+    components: [ hub75 ]
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+color:
+  - id: my_red
+    hex: "F50046"
+  - id: my_green
+    hex: "20FF00"
+  - id: my_orange
+    hex: "ff5900"
+  - id: numbered_yellow
+    hex: "FFD700"
+  - id: headsign_white
+    hex: "E0E0E0"
+  - id: time_grey
+    hex: "B0B0B0"
+  - id: realtime_green
+    hex: "20FF01"
+
+transit_tracker:
+  id: tracker
+  base_url: "wss://tfl.xdca.com/"
+  time_display: "arrival"
+  show_units: "long"
+  list_mode: "sequential"
+  scroll_headsigns: true
+  default_route_color: my_orange
+  headsign_color: my_orange
+  route_display: numbered
+  numbered_color: numbered_yellow
+  realtime_color: my_red
+  show_realtime_icon: false
+  limit: 3
+  request_trips: 6  # Fetch enough trips to fill both pages (2 × limit)
+  stops:
+    - stop_id: "tfl:940GZZLUHTD"
+      routes:
+        - "tfl:northern-outbound"
+        - "tfl:northern-inbound"
+  styles:
+    - route_id: "tfl:northern-outbound"
+      name: ""
+      color: my_orange
+    - route_id: "tfl:northern-inbound"
+      name: ""
+      color: my_red
+
+# Override the display pages from the base package.
+# Two transit pages are shown explicitly via draw_schedule(page), followed
+# by the clock and IP address pages.
+display:
+  - id: !extend matrix
+    pages:
+      - id: transit_page_1
+        lambda: |-
+          id(tracker).draw_schedule(0);
+      - id: transit_page_2
+        lambda: |-
+          id(tracker).draw_schedule(1);
+      - id: clock_page
+        lambda: |-
+          int x = it.get_width() / 2;
+          int y = it.get_height() / 2;
+          it.strftime(x, y / 2, id(pixolletta), COLOR_ON, TextAlign::CENTER, "%r", id(sntp_time).now());
+          it.strftime(x, y + (y / 2), id(pixolletta), COLOR_ON, TextAlign::CENTER, "%B %d, %Y", id(sntp_time).now());
+      # - id: ip_address_page
+      #   lambda: |-
+      #     int x = it.get_width() / 2;
+      #     int y = it.get_height() / 2;
+      #     auto ip_addresses = ::esphome::network::get_ip_addresses();
+      #     if (ip_addresses.empty()) {
+      #       it.printf(x, y, id(pixolletta), COLOR_ON, TextAlign::CENTER, "No IP Address");
+      #       return;
+      #     }
+      #     char buf[IP_ADDRESS_BUFFER_SIZE];
+      #     ip_addresses[0].str_to(buf);
+      #     it.printf(x, y, id(pixolletta), COLOR_ON, TextAlign::CENTER, "%s", buf);
+
+# Rotate pages every 5 seconds.
+# Each transit page explicitly selects which trips to show via draw_schedule(page).
+interval:
+  - interval: 5s
+    then:
+      - display.page.show_next: matrix
+      - component.update: matrix
