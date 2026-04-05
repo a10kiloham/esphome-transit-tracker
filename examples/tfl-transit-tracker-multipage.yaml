@@ -18,7 +18,7 @@
 ## matrix driver — so they do NOT need to be declared here.
 
 substitutions:
-  name: transit-tracker
+  name: transit-tracker-dc2218
   friendly_name: Transit Tracker
   project_version: "dev"
 
