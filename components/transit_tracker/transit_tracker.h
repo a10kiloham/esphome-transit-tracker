@@ -85,7 +85,8 @@ class TransitTracker : public Component {
 
     void draw_trip(
       const Trip &trip, int trip_index, int y_offset, int font_height, unsigned long uptime, uint rtc_now,
-      bool no_draw = false, int *headsign_overflow_out = nullptr, int scroll_cycle_duration = 0
+      bool no_draw = false, int *headsign_overflow_out = nullptr, int scroll_cycle_duration = 0,
+      int route_column_width = 0
     );
 
     Localization localization_{};

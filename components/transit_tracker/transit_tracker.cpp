@@ -372,7 +372,8 @@ void HOT TransitTracker::draw_realtime_icon_(int bottom_right_x, int bottom_righ
 
 void TransitTracker::draw_trip(
     const Trip &trip, int trip_index, int y_offset, int font_height, unsigned long uptime, uint rtc_now,
-    bool no_draw, int *headsign_overflow_out, int scroll_cycle_duration
+    bool no_draw, int *headsign_overflow_out, int scroll_cycle_duration,
+    int route_column_width
 ) {
     int route_width = 0;
     int _;
@@ -392,6 +393,13 @@ void TransitTracker::draw_trip(
       }
 
       this->font_->measure(route_label.c_str(), &route_width, &_, &_, &_);
+
+      // Use a consistent column width when provided, so that headsign text
+      // aligns across rows even when route labels have different widths
+      // (e.g. "1 " is narrower than "2 " in proportional fonts).
+      if (route_column_width > 0) {
+        route_width = route_column_width;
+      }
     }
 
     auto time_display = this->localization_.fmt_duration_from_now(
@@ -407,7 +415,7 @@ void TransitTracker::draw_trip(
 
     if (!no_draw) {
       Color time_color = trip.is_realtime ? this->realtime_color_ : this->time_color_;
-      this->display_->print(this->display_->get_width() + 1, y_offset, this->font_, time_color, display::TextAlign::TOP_RIGHT, time_display.c_str());
+      this->display_->print(this->display_->get_width(), y_offset, this->font_, time_color, display::TextAlign::TOP_RIGHT, time_display.c_str());
     }
 
     if (trip.is_realtime && this->show_realtime_icon_) {
@@ -565,12 +573,30 @@ void HOT TransitTracker::draw_schedule(int page) {
   unsigned long uptime = millis();
   uint rtc_now = this->rtc_->now().timestamp;
 
+  // Pre-compute the widest route label so every row's headsign starts
+  // at the same x-coordinate (avoids jitter from proportional digit widths).
+  int route_column_width = 0;
+  if (this->show_line_icons_) {
+    int _;
+    for (int i = page_start; i < page_end; i++) {
+      std::string route_label;
+      if (this->route_display_mode_ == ROUTE_DISPLAY_NUMBERED) {
+        route_label = str_sprintf("%d ", i + 1);
+      } else {
+        route_label = this->schedule_state_.trips[i].route_name;
+      }
+      int w;
+      this->font_->measure(route_label.c_str(), &w, &_, &_, &_);
+      route_column_width = max(route_column_width, w);
+    }
+  }
+
   int scroll_cycle_duration = 0;
   if (this->scroll_headsigns_) {
     int largest_headsign_overflow = 0;
     for (int i = page_start; i < page_end; i++) {
       int headsign_overflow;
-      this->draw_trip(this->schedule_state_.trips[i], i, 0, nominal_font_height, uptime, rtc_now, true, &headsign_overflow);
+      this->draw_trip(this->schedule_state_.trips[i], i, 0, nominal_font_height, uptime, rtc_now, true, &headsign_overflow, 0, route_column_width);
       largest_headsign_overflow = max(largest_headsign_overflow, headsign_overflow);
     }
 
@@ -585,7 +611,7 @@ void HOT TransitTracker::draw_schedule(int page) {
   if (y_offset < 0) y_offset = 0;
 
   for (int i = page_start; i < page_end; i++) {
-    this->draw_trip(this->schedule_state_.trips[i], i, y_offset, nominal_font_height, uptime, rtc_now, false, nullptr, scroll_cycle_duration);
+    this->draw_trip(this->schedule_state_.trips[i], i, y_offset, nominal_font_height, uptime, rtc_now, false, nullptr, scroll_cycle_duration, route_column_width);
     y_offset += nominal_font_height;
   }
 
