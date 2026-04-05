@@ -43,8 +43,6 @@ CONF_TIME_DISPLAY = "time_display"
 CONF_LIST_MODE = "list_mode"
 CONF_SCROLL_HEADSIGNS = "scroll_headsigns"
 CONF_ROUTE_DISPLAY = "route_display"
-CONF_NUMBERED_COLOR = "numbered_color"
-CONF_HEADSIGN_COLOR = "headsign_color"
 CONF_TIME_COLOR = "time_color"
 CONF_SHOW_REALTIME_ICON = "show_realtime_icon"
 CONF_SHOW_LINE_ICONS = "show_line_icons"
@@ -102,8 +100,6 @@ CONFIG_SCHEMA = cv.All(
             ),
             cv.Optional(CONF_SCROLL_HEADSIGNS, default=False): cv.boolean,
             cv.Optional(CONF_ROUTE_DISPLAY, default="route_name"): cv.enum(ROUTE_DISPLAY_MODE_VALUES),
-            cv.Optional(CONF_NUMBERED_COLOR): COLOR_SCHEMA,
-            cv.Optional(CONF_HEADSIGN_COLOR): COLOR_SCHEMA,
             cv.Optional(CONF_TIME_COLOR): COLOR_SCHEMA,
             cv.Optional(CONF_SHOW_REALTIME_ICON, default=True): cv.boolean,
             cv.Optional(CONF_SHOW_LINE_ICONS, default=True): cv.boolean,
@@ -179,20 +175,6 @@ async def to_code(config):
     cg.add(var.set_route_display_mode(config[CONF_ROUTE_DISPLAY]))
     cg.add(var.set_show_realtime_icon(config[CONF_SHOW_REALTIME_ICON]))
     cg.add(var.set_show_line_icons(config[CONF_SHOW_LINE_ICONS]))
-
-    if CONF_NUMBERED_COLOR in config:
-        cg.add(
-            var.set_numbered_color(
-                await cg.get_variable(config[CONF_NUMBERED_COLOR])
-            )
-        )
-
-    if CONF_HEADSIGN_COLOR in config:
-        cg.add(
-            var.set_headsign_color(
-                await cg.get_variable(config[CONF_HEADSIGN_COLOR])
-            )
-        )
 
     if CONF_TIME_COLOR in config:
         cg.add(

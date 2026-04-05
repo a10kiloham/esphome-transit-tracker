@@ -73,10 +73,6 @@ time:
 color:
   - id: rapidride_red
     hex: "F50046"
-  - id: numbered_yellow
-    hex: "FFD700"
-  - id: headsign_white
-    hex: "E0E0E0"
   - id: time_grey
     hex: "B0B0B0"
   - id: realtime_green
@@ -102,12 +98,6 @@ transit_tracker:
   #   route_name (default): Shows the route name/ID (e.g., "B", "221")
   #   numbered: Shows sequential numbers ("1 ", "2 ", "3 ") based on departure order
   route_display: numbered
-
-  # Color for numbered route labels (only used when route_display is "numbered")
-  numbered_color: numbered_yellow
-
-  # Color for headsign/destination text
-  headsign_color: headsign_white
 
   # Color for the time/duration text (when not realtime)
   time_color: time_grey

@@ -380,18 +380,15 @@ void TransitTracker::draw_trip(
     if (this->show_line_icons_) {
       // Determine what to display in the route label position
       std::string route_label;
-      Color route_label_color;
 
       if (this->route_display_mode_ == ROUTE_DISPLAY_NUMBERED) {
         route_label = str_sprintf("%d ", trip_index + 1);
-        route_label_color = this->numbered_color_;
       } else {
         route_label = trip.route_name;
-        route_label_color = trip.route_color;
       }
 
       if (!no_draw) {
-        this->display_->print(0, y_offset, this->font_, route_label_color, display::TextAlign::TOP_LEFT, route_label.c_str());
+        this->display_->print(0, y_offset, this->font_, trip.route_color, display::TextAlign::TOP_LEFT, route_label.c_str());
       }
 
       this->font_->measure(route_label.c_str(), &route_width, &_, &_, &_);
@@ -468,7 +465,7 @@ void TransitTracker::draw_trip(
     }
 
     this->display_->start_clipping(headsign_clipping_start, 0, headsign_clipping_end, this->display_->get_height());
-    this->display_->print(headsign_clipping_start - scroll_offset, y_offset, this->font_, this->headsign_color_, trip.headsign.c_str());
+    this->display_->print(headsign_clipping_start - scroll_offset, y_offset, this->font_, trip.route_color, trip.headsign.c_str());
     this->display_->end_clipping();
 }
 

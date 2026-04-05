@@ -12,6 +12,10 @@
 ## Page rotation (5s interval): transit_schedule → clock → transit_page_2 → …
 ##
 ## Key config: request_trips must be >= 2 × limit to fill both pages.
+##
+## The base package (a10kiloham.Transit Tracker) supplies the display,
+## font, time, and external component references — including the HUB75
+## matrix driver — so they do NOT need to be declared here.
 
 substitutions:
   name: transit-tracker
@@ -32,11 +36,6 @@ ota:
 packages:
   a10kiloham.Transit Tracker: github://a10kiloham/transit-tracker/firmware/transit-tracker.yaml@main
 
-external_components:
-  - source: github://avwuff/ESPHome-HUB75-MatrixDisplayWrapper@4fc1f26500b97a39693cd8af4ba2abb75f83ce0b
-    refresh: 0s
-    components: [ hub75 ]
-
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
@@ -48,10 +47,6 @@ color:
     hex: "20FF00"
   - id: my_orange
     hex: "ff5900"
-  - id: numbered_yellow
-    hex: "FFD700"
-  - id: headsign_white
-    hex: "E0E0E0"
   - id: time_grey
     hex: "B0B0B0"
   - id: realtime_green
@@ -65,9 +60,7 @@ transit_tracker:
   list_mode: "sequential"
   scroll_headsigns: true
   default_route_color: my_orange
-  headsign_color: my_orange
   route_display: numbered
-  numbered_color: numbered_yellow
   realtime_color: my_red
   show_realtime_icon: false
   limit: 3
@@ -85,10 +78,12 @@ transit_tracker:
       name: ""
       color: my_red
 
-# Extend the base display to add a second transit page.
-# The base package already defines transit_schedule and clock_page,
-# so we use !extend on those IDs to modify them in-place rather than
-# redefining them (which would cause a duplicate ID error).
+# Extend the base display for two transit pages then clock.
+# Base defines: transit_schedule (pos 0), clock_page (pos 1).
+# Strategy: modify both in-place, then append a new clock at the end.
+#   pos 0: transit_schedule → draw_schedule(0)  (trips 1–3)
+#   pos 1: clock_page       → draw_schedule(1)  (trips 4–6, repurposed)
+#   pos 2: clock_page_2     → actual clock       (appended)
 display:
   - id: !extend matrix
     pages:
@@ -97,16 +92,16 @@ display:
           id(tracker).draw_schedule(0);
       - id: !extend clock_page
         lambda: |-
+          id(tracker).draw_schedule(1);
+      - id: clock_page_2
+        lambda: |-
           int x = it.get_width() / 2;
           int y = it.get_height() / 2;
           it.strftime(x, y / 2, id(pixolletta), COLOR_ON, TextAlign::CENTER, "%r", id(sntp_time).now());
           it.strftime(x, y + (y / 2), id(pixolletta), COLOR_ON, TextAlign::CENTER, "%B %d, %Y", id(sntp_time).now());
-      - id: transit_page_2
-        lambda: |-
-          id(tracker).draw_schedule(1);
 
 # Rotate pages every 5 seconds.
-# Page order: transit_schedule (page 0) → clock_page → transit_page_2 (page 1) → …
+# Page order: transit (page 0) → transit (page 1) → clock → …
 interval:
   - interval: 5s
     then:

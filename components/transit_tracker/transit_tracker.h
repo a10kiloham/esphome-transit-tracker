@@ -66,8 +66,6 @@ class TransitTracker : public Component {
     void set_route_styles_from_text(const std::string &text);
 
     void set_route_display_mode(RouteDisplayMode mode) { route_display_mode_ = mode; }
-    void set_numbered_color(const Color &color) { numbered_color_ = color; }
-    void set_headsign_color(const Color &color) { headsign_color_ = color; }
     void set_time_color(const Color &color) { time_color_ = color; }
     void set_show_realtime_icon(bool show) { show_realtime_icon_ = show; }
     void set_show_line_icons(bool show) { show_line_icons_ = show; }
@@ -124,8 +122,6 @@ class TransitTracker : public Component {
     bool scroll_headsigns_ = false;
 
     RouteDisplayMode route_display_mode_ = ROUTE_DISPLAY_NAME;
-    Color numbered_color_ = Color(0xFFFFFF);
-    Color headsign_color_ = Color(0xFFFFFF);
     Color time_color_ = Color(0xa7a7a7);
     bool show_realtime_icon_ = true;
     bool show_line_icons_ = true;

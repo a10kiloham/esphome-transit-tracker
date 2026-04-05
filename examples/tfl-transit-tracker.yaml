@@ -1,3 +1,12 @@
+## TfL Transit Tracker – Single transit page with clock
+##
+## Shows Northern Line arrivals from Highgate station on one page,
+## plus a clock and IP address page.  Pages rotate every 5 seconds.
+##
+## The base package (a10kiloham.Transit Tracker) supplies the display,
+## font, time, and external component references — including the HUB75
+## matrix driver — so they do NOT need to be declared here.
+
 substitutions:
   name: transit-tracker
   friendly_name: Transit Tracker
@@ -17,11 +26,6 @@ ota:
 packages:
   a10kiloham.Transit Tracker: github://a10kiloham/transit-tracker/firmware/transit-tracker.yaml@main
 
-external_components:
-  - source: github://avwuff/ESPHome-HUB75-MatrixDisplayWrapper@4fc1f26500b97a39693cd8af4ba2abb75f83ce0b
-    refresh: 0s
-    components: [ hub75 ]
-
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
@@ -33,10 +37,6 @@ color:
     hex: "20FF00"
   - id: my_orange
     hex: "ff5900"
-  - id: numbered_yellow
-    hex: "FFD700"
-  - id: headsign_white
-    hex: "E0E0E0"
   - id: time_grey
     hex: "B0B0B0"
   - id: realtime_green
@@ -50,9 +50,7 @@ transit_tracker:
   list_mode: "sequential"
   scroll_headsigns: true
   default_route_color: my_orange
-  headsign_color: my_orange
   route_display: numbered
-  numbered_color: numbered_yellow
   realtime_color: my_red
   show_realtime_icon: false
   limit: 3
