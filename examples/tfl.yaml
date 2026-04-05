@@ -1,0 +1,111 @@
+## TfL Transit Tracker – Multi-page with clock
+##
+## Shows two pages of Northern Line arrivals from Highgate station,
+## plus a clock page.  Pages rotate every 5 seconds.
+##
+## The base package (a10kiloham.Transit Tracker) supplies the display,
+## font, time, and external component references — including the HUB75
+## matrix driver — so they do NOT need to be declared here.
+
+substitutions:
+  name: transit-tracker-dc2218
+  friendly_name: Transit Tracker
+  project_version: "dev"
+
+esphome:
+  name: ${name}
+  name_add_mac_suffix: false
+  friendly_name: ${friendly_name}
+  project:
+    name: "a10kiloham.Transit Tracker"
+    version: ${project_version}
+
+ota:
+  - platform: esphome
+
+packages:
+  a10kiloham.Transit Tracker: github://a10kiloham/transit-tracker/firmware/transit-tracker.yaml@main
+
+logger:
+  level: DEBUG
+  logs:
+    transit_tracker.component: DEBUG
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+color:
+  - id: tt_red
+    hex: "F50046"
+  - id: tt_green
+    hex: "20FF00"
+  - id: tt_orange
+    hex: "ffa500"
+  - id: tt_yellow
+    hex: "FFD700"
+  - id: tt_white
+    hex: "E0E0E0"
+  - id: tt_grey
+    hex: "B0B0B0"
+
+# Extend the base display for two transit pages then clock.
+# Base defines: transit_schedule (pos 0), clock_page (pos 1).
+# Strategy: modify both in-place, then append a new clock at the end.
+#   pos 0: transit_schedule → draw_schedule(0)  (trips 1–3)
+#   pos 1: clock_page       → draw_schedule(1)  (trips 4–6, repurposed)
+#   pos 2: clock_page_2     → actual clock       (appended)
+display:
+  - id: !extend matrix
+    # Ensure fast refresh for smooth scroll_headsigns animation.
+    # The base package may set a slower rate; 32ms ≈ 30 fps.
+    update_interval: 32ms
+    pages:
+      - id: !extend transit_schedule
+        lambda: |-
+          id(tracker).draw_schedule(0);
+      - id: !extend clock_page
+        lambda: |-
+          id(tracker).draw_schedule(1);
+      - id: clock_page_2
+        lambda: |-
+          int x = it.get_width() / 2;
+          int y = it.get_height() / 2;
+          it.strftime(x, y / 2, id(pixolletta), COLOR_ON, TextAlign::CENTER, "%r", id(sntp_time).now());
+          it.strftime(x, y + (y / 2), id(pixolletta), COLOR_ON, TextAlign::CENTER, "%B %d, %Y", id(sntp_time).now());
+
+transit_tracker:
+  id: tracker
+  base_url: "wss://tfl.xdca.com/"
+  time_display: "arrival"
+  show_units: "long"
+  list_mode: "sequential"
+  scroll_headsigns: true
+  default_route_color: tt_green
+  route_display: numbered
+  realtime_color: tt_grey
+  show_realtime_icon: true
+  limit: 3
+  request_trips: 6
+  stops:
+    - stop_id: "tfl:940GZZLUHTD"
+      routes:
+        - "tfl:northern-outbound"
+        - "tfl:northern-inbound"
+  styles:
+    - route_id: "tfl:northern-outbound"
+      name: ""
+      color: tt_orange
+    - route_id: "tfl:northern-inbound"
+      name: ""
+      color: tt_white
+  abbreviations:
+    - from: "CX"
+      to: "Charing Cross"
+
+# Rotate pages every 5 seconds.
+interval:
+  - interval: 5s
+    then:
+      - display.page.show_next: matrix
+      - component.update: matrix
