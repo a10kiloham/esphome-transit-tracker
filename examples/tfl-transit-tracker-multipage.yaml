@@ -24,7 +24,7 @@ substitutions:
 
 esphome:
   name: ${name}
-  name_add_mac_suffix: true
+  name_add_mac_suffix: false
   friendly_name: ${friendly_name}
   project:
     name: "a10kiloham.Transit Tracker"
