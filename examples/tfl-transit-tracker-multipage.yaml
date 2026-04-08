@@ -52,6 +52,13 @@ color:
   - id: realtime_green
     hex: "20FF01"
 
+# The base firmware's scroll_headsigns_config switch defaults to OFF,
+# which overrides the YAML scroll_headsigns: true setting after setup.
+# Override the restore_mode to match our YAML config.
+switch:
+  - id: !extend scroll_headsigns_config
+    restore_mode: RESTORE_DEFAULT_ON
+
 transit_tracker:
   id: tracker
   base_url: "wss://tfl.xdca.com/"
@@ -62,7 +69,7 @@ transit_tracker:
   default_route_color: my_orange
   route_display: numbered
   realtime_color: my_red
-  show_realtime_icon: false
+  show_realtime_icon: true
   limit: 3
   request_trips: 6  # Fetch enough trips to fill both pages (2 × limit)
   stops:
@@ -72,12 +79,18 @@ transit_tracker:
         - "tfl:northern-inbound"
   styles:
     - route_id: "tfl:northern-outbound"
-      name: ""
+      name: "N"
       color: my_orange
     - route_id: "tfl:northern-inbound"
-      name: ""
-      color: my_red
-
+      name: "S"
+      color: my_orange
+  abbreviations:
+    - from: "Edgware via CX"
+      to: "Edgware (CX Branch)"
+    - from: "Edgware via Bank"
+      to: "Edgware (Bank Branch)"
+    - from: "Golders Green via Bank"
+      to: "Golders Green"
 # Extend the base display for two transit pages then clock.
 # Base defines: transit_schedule (pos 0), clock_page (pos 1).
 # Strategy: modify both in-place, then append a new clock at the end.

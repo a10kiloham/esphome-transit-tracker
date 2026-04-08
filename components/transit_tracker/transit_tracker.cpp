@@ -478,8 +478,14 @@ void TransitTracker::draw_trip(
 }
 
 void HOT TransitTracker::draw_schedule(int page) {
-  ESP_LOGD(TAG, "draw_schedule called with page=%d, trips=%d, limit=%d",
-           page, (int)this->schedule_state_.trips.size(), this->limit_);
+  // One-time diagnostic: log scroll state after all switches have restored.
+  // This fires on the first draw_schedule call (well after setup completes).
+  static bool scroll_diag_logged = false;
+  if (!scroll_diag_logged) {
+    ESP_LOGI(TAG, "Scroll diagnostic: scroll_headsigns_=%s",
+             this->scroll_headsigns_ ? "true" : "false");
+    scroll_diag_logged = true;
+  }
 
   if (this->display_ == nullptr) {
     ESP_LOGW(TAG, "No display attached, cannot draw schedule");
@@ -549,8 +555,6 @@ void HOT TransitTracker::draw_schedule(int page) {
   int page_start = effective_page * this->limit_;
   int page_end = std::min(page_start + this->limit_, total_trips);
 
-  ESP_LOGD(TAG, "draw_schedule: effective_page=%d, total_trips=%d, page_start=%d, page_end=%d",
-           effective_page, total_trips, page_start, page_end);
 
   // If the requested page is beyond available trips
   if (page_start >= total_trips) {
@@ -603,6 +607,15 @@ void HOT TransitTracker::draw_schedule(int page) {
     if (largest_headsign_overflow > 0) {
       int longest_scroll_time = largest_headsign_overflow * 1000 / scroll_speed;
       scroll_cycle_duration = idle_time_left + idle_time_right + 2*longest_scroll_time;
+    }
+
+    // One-time diagnostic: log scroll computation results
+    static bool scroll_params_logged = false;
+    if (!scroll_params_logged && total_trips > 0) {
+      ESP_LOGI(TAG, "Scroll params: overflow=%d, cycle_duration=%d, scroll_headsigns=%s",
+               largest_headsign_overflow, scroll_cycle_duration,
+               this->scroll_headsigns_ ? "true" : "false");
+      scroll_params_logged = true;
     }
   }
 
