@@ -80,17 +80,13 @@ transit_tracker:
   styles:
     - route_id: "tfl:northern-outbound"
       name: "N"
-      color: my_orange
+      color: my_blue #toggle color as needed
     - route_id: "tfl:northern-inbound"
       name: "S"
       color: my_orange
-  abbreviations:
-    - from: "Edgware via CX"
-      to: "Edgware (CX Branch)"
-    - from: "Edgware via Bank"
-      to: "Edgware (Bank Branch)"
-    - from: "Golders Green via Bank"
-      to: "Golders Green"
+  abbreviations: #optional rewrites, simple string match
+    - from: "CX"
+      to: "Charing Cross"
 # Extend the base display for two transit pages then clock.
 # Base defines: transit_schedule (pos 0), clock_page (pos 1).
 # Strategy: modify both in-place, then append a new clock at the end.
