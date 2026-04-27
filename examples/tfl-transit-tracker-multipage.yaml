@@ -84,9 +84,9 @@ transit_tracker:
     - route_id: "tfl:northern-inbound"
       name: "S"
       color: my_orange
-  abbreviations: #optional rewrites, simple string match
-    - from: "CX"
-      to: "Charing Cross"
+  #abbreviations: #optional rewrites, simple string match
+    #- from: "CX"
+    #  to: "Charing Cross"
 # Extend the base display for two transit pages then clock.
 # Base defines: transit_schedule (pos 0), clock_page (pos 1).
 # Strategy: modify both in-place, then append a new clock at the end.
