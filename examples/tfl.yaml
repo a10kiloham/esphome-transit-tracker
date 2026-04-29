@@ -106,9 +106,9 @@ transit_tracker:
     - route_id: "tfl:northern-inbound"
       name: ""
       color: tt_white
-  abbreviations:
-    - from: "CX"
-      to: "Charing Cross"
+  #abbreviations:
+    #- from: "CX"
+    #  to: "Charing Cross"
 
 # Rotate pages every 5 seconds.
 interval:
